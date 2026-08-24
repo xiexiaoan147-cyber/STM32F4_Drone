@@ -29,10 +29,10 @@ typedef struct {
 
 /* PID 参数 */
 typedef struct {
-	float kp_angle;   /* 角度环 P */
-	float kp_rate;    /* 角速度环 P */
-	float ki_rate;    /* 角速度环 I */
-	float kd_rate;    /* 角速度环 D */
+    float kp_angle;   /* 角度环 P */
+    float kp_rate;    /* 角速度环 P */
+    float ki_rate;    /* 角速度环 I, 单位 1/s (配合 ∫err·dt) */
+    float kd_rate;    /* 角速度环 D (测量值微分) */
 } pid_params_t;
 
 /** @brief 初始化控制模块 */
@@ -47,12 +47,13 @@ void Control_SetTarget(const control_target_t *t);
 /**
  * @brief 每 5ms 调用一次: 状态机 + 串级PID + 混控 + 电机输出
  * @param att     姿态角 (rad)
- * @param gyro    角速度 (deg/s)
+ * @param gyro    角速度 (rad/s, 滤波后已去零偏)
  * @param az_body 垂直加速度 (m/s², 去重力; >0 上升)
  */
 void Control_Update(const attitude_t *att, const float gyro[3], float az_body);
 
-/** @brief 解锁/上锁 */
+/** @brief 解锁/上锁 (上锁会清除急停锁存并复位 PID 动态状态;
+ *         急停激活期间拒绝解锁) */
 void Control_Armed(int arm);
 
 /** @brief 急停 */
