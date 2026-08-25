@@ -2,6 +2,7 @@
  * data_process.h — IMU 数据处理模块
  *
  * 流程: 原始数据 → 零偏校准 → 二阶低通滤波 → Mahony姿态解算 → 姿态角
+ * 运行频率 500Hz (与 freertos.c 的 ImuRead/Attitude 任务同步)
  * 依赖: mpu6050_i2c.h (imu_data_t) / mahony.h (attitude_t)
  */
 #ifndef DATA_PROCESS_H
@@ -12,8 +13,8 @@
 #include <stdint.h>
 
 /**
- * @brief 初始化数据处理 (需静止放置)
- * @param calib_samples 零偏校准采样帧数 (建议 200 = 0.4s)
+ * @brief 初始化数据处理 (需静止放置; 由 ImuRead 任务在调度器启动后调用)
+ * @param calib_samples 零偏校准采样帧数 (250 = 0.5s @500Hz)
  */
 void DataProcess_Init(uint32_t calib_samples);
 

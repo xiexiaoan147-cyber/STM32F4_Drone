@@ -44,6 +44,9 @@ void Control_SetPID(const pid_params_t *p);
 /** @brief 更新控制目标 (蓝牙指令每帧调用) */
 void Control_SetTarget(const control_target_t *t);
 
+/** @brief 指令心跳 (收到非控制目标的有效帧时调用, 防误判失控) */
+void Control_KeepAlive(void);
+
 /**
  * @brief 每 5ms 调用一次: 状态机 + 串级PID + 混控 + 电机输出
  * @param att     姿态角 (rad)

@@ -1,37 +1,15 @@
 /**
  * mpu6050_i2c.c — MPU6050 I2C 驱动实现
  *
- * I2C1: PB8(SCL,AF4) / PB9(SDA,AF4) @ 400kHz
+ * I2C1: PB8(SCL,AF4) / PB9(SDA,AF4) @ 400kHz, 见 i2c.c (MX_I2C1_Init)
  * 设备地址: 0x68 << 1 = 0xD0
+ *
+ * 修复记录: 删除本文件私有的 I2C1_Init + hi2c1 定义 ——
+ *   与 CubeMX 生成的 i2c.c 重复定义 hi2c1 (链接重定义错误),
+ *   且引脚 (PB8/9 vs PB6/7) 互相冲突; 现统一由 i2c.c 提供句柄和初始化
  */
 #include "mpu6050_i2c.h"
-
-I2C_HandleTypeDef hi2c1;
-
-/* ---- I2C1 初始化 ---- */
-void I2C1_Init(void)
-{
-	__HAL_RCC_GPIOB_CLK_ENABLE();
-	__HAL_RCC_I2C1_CLK_ENABLE();
-
-	GPIO_InitTypeDef gpio = {0};
-	gpio.Pin       = GPIO_PIN_8 | GPIO_PIN_9;
-	gpio.Mode      = GPIO_MODE_AF_OD;
-	gpio.Pull      = GPIO_PULLUP;
-	gpio.Speed     = GPIO_SPEED_FREQ_HIGH;
-	gpio.Alternate = GPIO_AF4_I2C1;
-	HAL_GPIO_Init(GPIOB, &gpio);
-
-	hi2c1.Instance             = I2C1;
-	hi2c1.Init.ClockSpeed      = 400000;
-	hi2c1.Init.DutyCycle       = I2C_DUTYCYCLE_2;
-	hi2c1.Init.OwnAddress1     = 0;
-	hi2c1.Init.AddressingMode  = I2C_ADDRESSINGMODE_7BIT;
-	hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-	hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-	hi2c1.Init.NoStretchMode   = I2C_NOSTRETCH_DISABLE;
-	HAL_I2C_Init(&hi2c1);
-}
+#include "i2c.h"       /* hi2c1: 由 MX_I2C1_Init 初始化的唯一 I2C 句柄 */
 
 /* ---- 写单个寄存器 ---- */
 static int MPU6050_WriteReg(uint8_t reg, uint8_t val)

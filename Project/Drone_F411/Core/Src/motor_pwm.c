@@ -8,6 +8,7 @@
 #include "stm32f4xx_hal.h"
 
 static TIM_HandleTypeDef  htim3;
+static float s_last[4];          /* 最近一拍 4 路输出 (Safety_Update 记录用) */
 
 /* ============================================================
  * TIM3 PWM 初始化
@@ -60,6 +61,13 @@ void Motor_Init(void)
 /* ============================================================
  * 占空比 clamp 到 [0, 1]
  * ============================================================ */
+static inline float clamp01(float x)
+{
+	if (x < 0.0f) return 0.0f;
+	if (x > 1.0f) return 1.0f;
+	return x;
+}
+
 static inline uint32_t duty_to_ccr(float duty)
 {
 	if (duty < 0.0f) duty = 0.0f;
@@ -72,10 +80,22 @@ static inline uint32_t duty_to_ccr(float duty)
  * ============================================================ */
 void Motor_Set(float m1, float m2, float m3, float m4)
 {
+	s_last[0] = clamp01(m1);   /* duty_to_ccr 内部同样 clamp, 这里记录限幅后值 */
+	s_last[1] = clamp01(m2);
+	s_last[2] = clamp01(m3);
+	s_last[3] = clamp01(m4);
 	__HAL_TIM_SET_COMPARE(&htim3, LOGICAL_M1_CHANNEL, duty_to_ccr(m1));
 	__HAL_TIM_SET_COMPARE(&htim3, LOGICAL_M2_CHANNEL, duty_to_ccr(m2));
 	__HAL_TIM_SET_COMPARE(&htim3, LOGICAL_M3_CHANNEL, duty_to_ccr(m3));
 	__HAL_TIM_SET_COMPARE(&htim3, LOGICAL_M4_CHANNEL, duty_to_ccr(m4));
+}
+
+void Motor_GetLast(float m[4])
+{
+	m[0] = s_last[0];
+	m[1] = s_last[1];
+	m[2] = s_last[2];
+	m[3] = s_last[3];
 }
 
 void Motor_Stop(void)

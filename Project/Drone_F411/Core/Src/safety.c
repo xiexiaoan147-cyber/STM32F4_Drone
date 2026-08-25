@@ -68,7 +68,7 @@ void Safety_Update(float roll, float pitch, float yaw,
     if (g_safety.armed && now_ms - g_safety.last_cmd_ms > g_safety.cmd_timeout_ms) {
         g_safety.status = SAFE_LOST_CONTROL;
         printf("[SAFETY] LOST CONTROL: %lums no cmd\r\n",
-               now_ms - g_safety.last_cmd_ms);
+               (unsigned long)(now_ms - g_safety.last_cmd_ms));
         return;
     }
 
@@ -119,7 +119,7 @@ void IWDG_Init(uint32_t reload_ms) {
     IWDG->RLR = reload_ms;       /* 重载值 */
     IWDG->KR  = 0xCCCC;          /* 启动 */
     IWDG->KR  = 0xAAAA;          /* 首次喂狗 */
-    printf("[SAFETY] IWDG started: %lums timeout\r\n", reload_ms);
+    printf("[SAFETY] IWDG started: %lums timeout\r\n", (unsigned long)reload_ms);
 }
 
 void IWDG_Feed(void) {

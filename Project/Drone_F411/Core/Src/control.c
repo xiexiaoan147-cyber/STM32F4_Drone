@@ -162,6 +162,13 @@ void Control_SetTarget(const control_target_t *t)
 	last_cmd_ms = now_ms;   /* 刷新指令心跳 (失控计时归零) */
 }
 
+/* 非控制目标类有效帧 (PING/ARM/EMERGENCY...) 也视为链路存活,
+ * 防止 App 只发心跳不发 SETPOINT 时被误判失控 */
+void Control_KeepAlive(void)
+{
+	last_cmd_ms = now_ms;
+}
+
 void Control_Armed(int arm)
 {
 	if (arm) {

@@ -1,0 +1,17 @@
+# 构建产物
+build/
+*.o
+*.d
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+*.lss
+
+# IDE
+.vscode/
+.idea/
+
+# 主机端测试产物
+**/Tools/host_test/ctrltest
