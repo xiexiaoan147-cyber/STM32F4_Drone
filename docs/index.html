@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="文档在线预览（内容纯属虚构，仅供演示）">
+<title>文档在线查阅 · DocView</title>
+<style>
+  :root {
+    --accent: #2563eb;
+    --accent-dark: #1d4ed8;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --paper: #ffffff;
+    --desk: #e9ecf1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    background: linear-gradient(180deg, #dfe3ea 0%, var(--desk) 240px, var(--desk) 100%);
+    color: var(--ink);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* ===== 顶栏 ===== */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+  }
+  .topbar-inner {
+    max-width: 900px; margin: 0 auto; padding: 12px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+  .brand .logo {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #60a5fa);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+  }
+  .brand small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+  .badge {
+    font-size: 12px; color: #92400e; background: #fef3c7;
+    border: 1px solid #fde68a; border-radius: 999px; padding: 4px 12px;
+    white-space: nowrap;
+  }
+
+  .wrap { max-width: 900px; margin: 0 auto; padding: 28px 20px 120px; }
+
+  /* ===== 文档信息区 ===== */
+  .doc-head { text-align: center; margin-bottom: 26px; }
+  .doc-head h1 { font-size: clamp(20px, 4vw, 28px); letter-spacing: .5px; }
+  .doc-head .meta {
+    margin-top: 8px; color: var(--muted); font-size: 13px;
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+  }
+  .doc-head .meta span::before { content: "·"; margin-right: 8px; color: #c3c8d0; }
+  .doc-head .meta span:first-child::before { content: ""; margin: 0; }
+
+  .cta-row { display: flex; justify-content: center; gap: 12px; margin: 22px 0 34px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 26px; border-radius: 10px; font-size: 15px; font-weight: 600;
+    text-decoration: none; cursor: pointer; border: 1px solid transparent;
+    transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff; box-shadow: 0 6px 18px rgba(37,99,235,.35);
+  }
+  .btn-primary:hover { box-shadow: 0 8px 22px rgba(37,99,235,.45); }
+  .btn-ghost {
+    background: #fff; color: var(--ink); border-color: #d6dae1;
+  }
+  .btn-ghost:hover { background: #f6f8fa; }
+
+  /* ===== 纸张预览 ===== */
+  .sheet {
+    background: var(--paper);
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(15,23,42,.10), 0 12px 32px rgba(15,23,42,.14);
+    padding: 14px;
+  }
+  .sheet img { width: 100%; display: block; border-radius: 2px; }
+  .sheet + .page-cap { margin-top: -34px; }
+  .page-gap { height: 56px; }
+  .page-cap {
+    text-align: center; color: var(--muted); font-size: 12px;
+    margin-top: 14px; letter-spacing: 1px;
+  }
+
+  /* ===== 底部固定按钮 ===== */
+  .fab-bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
+    display: flex; justify-content: center; padding: 14px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(233,236,241,0) 0%, rgba(233,236,241,.9) 60%);
+  }
+  .fab-bar .btn { pointer-events: auto; box-shadow: 0 10px 30px rgba(37,99,235,.4); }
+
+  footer {
+    text-align: center; color: var(--muted); font-size: 12px;
+    padding: 30px 20px 40px;
+  }
+  footer .line { margin: 4px 0; }
+  @media (max-width: 520px) {
+    .brand small { display: none; }
+    .badge { font-size: 11px; padding: 3px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="logo">📄</div>
+      <div>DocView 在线查阅
+        <small>文档预览 · 示例站点</small>
+      </div>
+    </div>
+    <span class="badge">内容纯属虚构 · 仅供演示</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="doc-head">
+    <h1>《学生成绩单》在线预览</h1>
+    <div class="meta">
+      <span>编号：USCEAHCH-2026-DEMO</span>
+      <span>共 2 页</span>
+      <span>格式：PDF</span>
+    </div>
+  </section>
+
+  <div class="cta-row">
+    <a class="btn btn-primary" href="files/transcript.pdf" target="_blank" rel="noopener">🔍 查看源文件（PDF）</a>
+    <a class="btn btn-ghost" href="files/transcript.pdf" download="学生成绩单（虚构示例）.pdf">⬇ 下载 PDF</a>
+  </div>
+
+  <figure class="sheet">
+    <img src="assets/page-1.jpg" alt="文档第 1 页预览" loading="eager">
+  </figure>
+  <div class="page-cap">— 第 1 页 / 共 2 页 —</div>
+
+  <div class="page-gap"></div>
+
+  <figure class="sheet">
+    <img src="assets/page-2.jpg" alt="文档第 2 页预览" loading="lazy">
+  </figure>
+  <div class="page-cap">— 第 2 页 / 共 2 页 —</div>
+
+</main>
+
+<div class="fab-bar">
+  <a class="btn btn-primary" href="files/transcript.pdf" target="_blank" rel="noopener">🔍 查看源文件（PDF）</a>
+</div>
+
+<footer>
+  <div class="line">⚠️ 本站点及所展示文档的全部内容纯属虚构，仅用于网页技术演示，与任何真实人物、学校或机构无关。</div>
+  <div class="line">© 2026 DocView Demo · Powered by GitHub Pages</div>
+</footer>
+
+</body>
+</html>
