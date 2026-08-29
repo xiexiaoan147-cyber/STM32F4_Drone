@@ -894,13 +894,13 @@ def plot_axes(px, py, w, h, title):
     ax1, ay1 = px + w - 0.15, py + 0.4       # 右上
     gline(s, ax0, ay1, ax0, ay0, GRAY, 1.5)
     arrow(s, ax0, ay0, ax1, ay0, GRAY, 1.5)
-    uy = ay0 - (ay0 - ay1) * 0.62            # y=1 的位置(留出超调空间)
+    uy = ay0 - (ay0 - ay1) * 0.55            # y=1 的位置(留出超调空间)
     gline(s, ax0, uy, ax1, uy, GRAY, 1.2, dash="dash")
     text_in(s, ax1 - 0.55, uy - 0.26, 0.6, 0.22, [("目标", 9.5, False, GRAY)])
     return ax0, ax1, ay0, uy
 
-def plot_resp(ax0, ax1, ay0, uy, fn, color, n=40, clip=1.65):
-    span = (uy - ay0) / 1.0                  # 1.0 对应的像素高
+def plot_resp(ax0, ax1, ay0, uy, fn, color, n=40, clip=1.75):
+    span = (ay0 - uy) / 1.0                  # 1.0 对应的像素高(向上为正)
     pts = []
     for i in range(n + 1):
         t = i / n
