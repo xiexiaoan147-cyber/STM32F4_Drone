@@ -1,19 +1,29 @@
 /**
- * mpu6050_i2c.c — MPU6050 I2C 驱动实现
+ * mpu6050_i2c.c — MPU6050 I2C 驱动实现 (模块自持 I2C1 初始化)
  *
- * I2C1: PB8(SCL,AF4) / PB9(SDA,AF4) @ 400kHz
- * 设备地址: 0x68 << 1 = 0xD0
+ * 本模块内部完成 I2C1 的完整初始化, 不依赖 CubeMX 生成的 i2c.c:
+ *   - I2C1 时钟 + PB8(SCL)/PB9(SDA) GPIO 复用 AF4 上拉
+ *   - HAL_I2C_Init (400kHz) + HAL_I2C_MspInit (本文件内)
+ *
+ * 引脚: PB8(SCL) / PB9(SDA) @ 400kHz
+ * 地址: 0x68 (AD0=GND)
+ * 陀螺仪输出: rad/s (全链路 SI 单位)
  */
 #include "mpu6050_i2c.h"
+#include <stdio.h>
 
+/* I2C 句柄 (本模块所有, 外部如需可 extern) */
 I2C_HandleTypeDef hi2c1;
 
-/* ---- I2C1 初始化 ---- */
+/* ============================================================
+ * I2C1 外设初始化 (GPIO + 时钟 + 寄存器)
+ * ============================================================ */
 void I2C1_Init(void)
 {
 	__HAL_RCC_GPIOB_CLK_ENABLE();
 	__HAL_RCC_I2C1_CLK_ENABLE();
 
+	/* PB8/PB9: AF4(I2C1), 开漏 + 上拉 */
 	GPIO_InitTypeDef gpio = {0};
 	gpio.Pin       = GPIO_PIN_8 | GPIO_PIN_9;
 	gpio.Mode      = GPIO_MODE_AF_OD;
@@ -30,7 +40,18 @@ void I2C1_Init(void)
 	hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
 	hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
 	hi2c1.Init.NoStretchMode   = I2C_NOSTRETCH_DISABLE;
-	HAL_I2C_Init(&hi2c1);
+	if (HAL_I2C_Init(&hi2c1) != HAL_OK) {
+		printf("[MPU] I2C1 init FAILED\r\n");
+	}
+}
+
+/* I2C1 底层 GPIO/时钟 (HAL_I2C_Init 回调, 本文件内实现) */
+void HAL_I2C_MspInit(I2C_HandleTypeDef *h)
+{
+	if (h->Instance == I2C1) {
+		__HAL_RCC_GPIOB_CLK_ENABLE();
+		__HAL_RCC_I2C1_CLK_ENABLE();
+	}
 }
 
 /* ---- 写单个寄存器 ---- */
@@ -92,9 +113,9 @@ int MPU6050_Read(imu_data_t *out)
 	int16_t gz_raw = (buf[12] << 8) | buf[13];
 
 	out->ax   = ax_raw / 16384.0f * 9.81f;   /* ±2g → 16384 LSB/g */
-	out->ay   = ay_raw / 16384.0f * 9.81f;	 //*9.81进行单位转换9.81m/s2=1g
+	out->ay   = ay_raw / 16384.0f * 9.81f;	 //转换单位为 m/s^2
 	out->az   = az_raw / 16384.0f * 9.81f;
-	
+
 	/* 陀螺仪输出统一为 rad/s (全链路 SI 单位) */
 	out->gx   = gx_raw / 131.0f * 0.01745329f;   /* ±250°/s → 131 LSB/° → rad/s */
 	out->gy   = gy_raw / 131.0f * 0.01745329f;

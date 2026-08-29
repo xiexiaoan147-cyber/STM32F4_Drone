@@ -16,11 +16,6 @@
  *    欧拉角有"万向节死锁"问题 (pitch=90°时 roll 和 yaw 重叠),
  *    四元数没有这个问题, 而且计算量更小 (只做乘法和加法)
  *
- *  参考文献:
- *    Mahony, R., Hamel, T., & Pflimlin, J. M. (2008).
- *    "Nonlinear Complementary Filters on the Special Orthogonal Group."
- *    IEEE Transactions on Automatic Control, 53(5), 1203-1218.
- *
  *  FPU 注意:
  *    所有运算都用 float + 硬件 FPU (STM32F411 的 Cortex-M4F),
  *    单精度对姿态解算足够 (精度 ~7 位有效数字)

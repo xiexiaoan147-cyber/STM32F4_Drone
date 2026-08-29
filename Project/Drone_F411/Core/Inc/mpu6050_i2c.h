@@ -11,18 +11,24 @@
 #include "stm32f4xx_hal.h"
 #include <stdint.h>
 
-#define MPU_ADDR 0x68 << 1
+/* 注意括号: 避免宏展开优先级陷阱 (原来是 #define MPU_ADDR 0x68 << 1,
+ * 若写成 MPU_ADDR | x 会错) */
+#define MPU_ADDR ((uint8_t)(0x68 << 1))
+
 /* IMU 数据结构体 */
 typedef struct 
 	{
 	float ax, ay, az;       /* 加速度 (m/s^2) */
-	float gx, gy, gz;       /* 角速度 (deg/s) */
+	float gx, gy, gz;       /* 角速度 (rad/s, 驱动已换算, 全链路 SI 单位) */
 	float temp;             /* 温度 (°C) */
 } imu_data_t;
 
+/* I2C1 句柄 (本模块初始化, 供外部读取用) */
 extern I2C_HandleTypeDef hi2c1;
 
+/* I2C1 完整初始化 (GPIO + 时钟, 模块自持, 调用一次即可) */
 void I2C1_Init(void);
+
 int  MPU6050_Init(void);
 int  MPU6050_Read(imu_data_t *out);
 

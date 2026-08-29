@@ -41,7 +41,8 @@ extern UART_HandleTypeDef huart1;
 void MX_USART1_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+/** 启动 USART1 中断逐字节接收 (字节经 xByteQueue 送 Comm 任务解析 BLE 帧) */
+void USART1_StartRx(void);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

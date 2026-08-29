@@ -11,8 +11,8 @@ Safety_t g_safety;
 
 void Safety_Init(void) {
     memset(&g_safety, 0, sizeof(g_safety));
-    g_safety.bat_threshold  = 6.4f;
-    g_safety.angle_limit_deg = 60.0f;
+    g_safety.bat_threshold  = 3.3f;          /* 1S LiPo 低压警告 (满电4.2/标称3.7/低电3.3) */
+    g_safety.angle_limit_deg = 45.0f;        /* 与 control.c ANGLE_LIMIT_RAD(45°) 一致 */
     g_safety.cmd_timeout_ms  = 1000;
     g_safety.motor_threshold = 0.9f;
     g_safety.iwdg_reload_ms  = 1000;
@@ -68,7 +68,7 @@ void Safety_Update(float roll, float pitch, float yaw,
     if (g_safety.armed && now_ms - g_safety.last_cmd_ms > g_safety.cmd_timeout_ms) {
         g_safety.status = SAFE_LOST_CONTROL;
         printf("[SAFETY] LOST CONTROL: %lums no cmd\r\n",
-               now_ms - g_safety.last_cmd_ms);
+               (unsigned long)(now_ms - g_safety.last_cmd_ms));
         return;
     }
 
@@ -115,11 +115,11 @@ void Safety_Update(float roll, float pitch, float yaw,
 void IWDG_Init(uint32_t reload_ms) {
     /* LSI ~32KHz, 分频 32 → 1KHz tick */
     IWDG->KR  = 0x5555;           /* 解锁 PR */
-    IWDG->PR  = 0x02;            /* /32 → ~1ms/tick */
+    IWDG->PR  = 0x03;            /* /32 → ~1ms/tick */
     IWDG->RLR = reload_ms;       /* 重载值 */
     IWDG->KR  = 0xCCCC;          /* 启动 */
     IWDG->KR  = 0xAAAA;          /* 首次喂狗 */
-    printf("[SAFETY] IWDG started: %lums timeout\r\n", reload_ms);
+    printf("[SAFETY] IWDG started: %lums timeout\r\n", (unsigned long)reload_ms);
 }
 
 void IWDG_Feed(void) {

@@ -33,10 +33,9 @@
 #define configQUEUE_REGISTRY_SIZE               8
 
 /*---------------------------------------------------------------------------*/
-/* 软件定时器                                                                 */
-/*---------------------------------------------------------------------------*/
+/* 软件定时器未使用: 优先级设为 1 (低), 仅作预留 */
 #define configUSE_TIMERS                        1
-#define configTIMER_TASK_PRIORITY               ( configMAX_PRIORITIES - 1 ) /* 15, 最低 */
+#define configTIMER_TASK_PRIORITY               1
 #define configTIMER_QUEUE_LENGTH                10
 #define configTIMER_TASK_STACK_DEPTH            256
 
@@ -78,8 +77,10 @@
 /* Hook 函数                                                                  */
 /*---------------------------------------------------------------------------*/
 #define configUSE_IDLE_HOOK                     0
-#define configUSE_TICK_HOOK                     1   /* HAL_IncTick() 在此调用 */
-#define configUSE_MALLOC_FAILED_HOOK            1   /* 内存不足时触发 */
+#define configUSE_TICK_HOOK                     0   /* HAL 时基由 stm32f4xx_it.c 的
+                                                       SysTick_Handler 直接双跳实现,
+                                                       无需 Tick Hook */
+#define configUSE_MALLOC_FAILED_HOOK            1   /* 内存不足时触发 (freertos.c 已实现) */
 #define configUSE_DAEMON_TASK_STARTUP_HOOK      0
 
 /*---------------------------------------------------------------------------*/
@@ -90,9 +91,10 @@
 #define configENABLE_MPU                        0   /* 暂不启用 MPU */
 #define configENABLE_TRUSTZONE                  0
 
-/* FreeRTOS 使用 SysTick 作为心跳 */
+/* FreeRTOS 使用 PendSV/SVC 做上下文切换, 通过符号映射挂到向量表;
+ * SysTick 不在这里映射 —— 由 stm32f4xx_it.c 的 SysTick_Handler
+ * 同时调用 HAL_IncTick() 与 xPortSysTickHandler() (见该文件) */
 #define xPortPendSVHandler      PendSV_Handler
-#define xPortSysTickHandler     SysTick_Handler
 #define vPortSVCHandler         SVC_Handler
 
 /*---------------------------------------------------------------------------*/

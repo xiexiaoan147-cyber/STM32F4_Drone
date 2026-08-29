@@ -8,11 +8,16 @@
  */
 #include "data_process.h"
 #include "mahony.h"
+#include "safety.h"     /* IWDG_Feed: 校准循环期间喂狗 */
 #include <stdio.h>
 
-/* 二阶低通: 每级 alpha=0.3 (等效截止 ~45Hz @500Hz 采样) */
+/* 二阶低通: 每级 alpha=0.3 (500Hz 采样, 截止约 ~45Hz) */
 #define LPF_ALPHA  0.3f
 #define GRAVITY    9.81f
+
+/* 姿态/滤波实际运行频率: 与 freertos.c 的 Attitude 任务周期 (2ms) 一致 */
+#define DP_SAMPLE_HZ  500.0f
+#define DP_DT         0.002f
 
 /* 内部状态 */
 static float gyr_bias[3];                /* 陀螺仪零偏 */
@@ -28,29 +33,32 @@ void DataProcess_Init(uint32_t calib_samples)
 {
 	imu_data_t raw;
 	float sum_gx = 0, sum_gy = 0, sum_gz = 0;
-	uint32_t i;
+	uint32_t i, valid = 0;
 
-	printf("[CALIB] Hold still... (%lu samples)\r\n", calib_samples);
+	printf("[CALIB] Hold still... (%lu samples)\r\n", (unsigned long)calib_samples);
 
 	for (i = 0; i < calib_samples; i++) {
 		if (MPU6050_Read(&raw) == 0) {
 			sum_gx += raw.gx;
 			sum_gy += raw.gy;
 			sum_gz += raw.gz;
+			valid++;
 		}
-		HAL_Delay(2);   /* 2ms = 500Hz 同步 */
+		IWDG_Feed();       /* 校准期间控制任务未跑, 在此喂狗防复位 */
+		HAL_Delay(2);      /* 2ms = 500Hz 同步 */
 	}
 
-	gyr_bias[0] = sum_gx / calib_samples;
-	gyr_bias[1] = sum_gy / calib_samples;
-	gyr_bias[2] = sum_gz / calib_samples;
+	/* 只用成功样本求均值 (原实现读失败也除以总数, 零偏会被稀释) */
+	gyr_bias[0] = valid ? sum_gx / valid : 0.0f;
+	gyr_bias[1] = valid ? sum_gy / valid : 0.0f;
+	gyr_bias[2] = valid ? sum_gz / valid : 0.0f;
 
 	/* 初始化滤波缓存和 Mahony */
 	for (int i = 0; i < 3; i++) {
 		acc_lpf1[i] = acc_lpf2[i] = 0;
 		gyr_lpf1[i] = gyr_lpf2[i] = 0;
 	}
-	Mahony_Init(200.0f, 0.5f, 0.05f);
+	Mahony_Init(DP_SAMPLE_HZ, 0.5f, 0.05f);
 
 	calib_done = 1;
 	printf("[CALIB] Done. Gyro bias: %.2f %.2f %.2f deg/s\r\n",
@@ -63,7 +71,7 @@ void DataProcess_Init(uint32_t calib_samples)
 void DataProcess_Update(imu_data_t *raw, attitude_t *att)
 {
 	if (!calib_done) {
-		DataProcess_Init(200);
+		DataProcess_Init(250);
 		return;
 	}
 
@@ -91,19 +99,22 @@ void DataProcess_Update(imu_data_t *raw, attitude_t *att)
 	gyr_lpf2[1] = LPF_ALPHA * gyr_lpf1[1] + (1.0f - LPF_ALPHA) * gyr_lpf2[1];
 	gyr_lpf2[2] = LPF_ALPHA * gyr_lpf1[2] + (1.0f - LPF_ALPHA) * gyr_lpf2[2];
 
-	/* 3. Mahony 姿态解算 (固定 dt=5ms @200Hz) */
+	/* 3. Mahony 姿态解算 (dt=2ms @500Hz, 与 Attitude 任务周期一致) */
 	Mahony_Update(gyr_lpf2[0], gyr_lpf2[1], gyr_lpf2[2],
 		      acc_lpf2[0],   acc_lpf2[1],   acc_lpf2[2],
-		      0.005f, att);
+		      DP_DT, att);
 
 	/* 4. 垂直加速度 (大地系 z, 去重力)
-	 *    用四元数把机体系加速度转到大地系, 取 z 分量减 g */
+	 *    用四元数把机体系加速度转到大地系, 取 z 分量减 g
+	 *    v_w = R(q)·v_b, 大地系 z 分量 = R 的第三行:
+	 *      [ 2(q1q3-q0q2)  2(q2q3+q0q1)  q0²-q1²-q2²+q3² ] · a_b
+	 *   就是求（ax, ay, az）在（vx, vy, vz）方向上的投影量,点积
+	 *     */
 	float q0, q1, q2, q3;
-	Mahony_GetQuat(&q0, &q1, &q2, &q3);
+	Mahony_GetQuat(&q0, &q1, &q2, &q3); 
 
-	/* 旋转矩阵第三行: 大地系 z 分量 */
-	float a_wz = 2.0f * (q0 * q2 + q1 * q3) * acc_lpf2[0]
-		   + 2.0f * (q2 * q3 - q0 * q1) * acc_lpf2[1]
+	float a_wz = 2.0f * (q1 * q3 - q0 * q2) * acc_lpf2[0]
+		   + 2.0f * (q2 * q3 + q0 * q1) * acc_lpf2[1]
 		   + (q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3) * acc_lpf2[2];
 
 	vert_accel = a_wz - GRAVITY;   /* >0 上升, <0 下落 */

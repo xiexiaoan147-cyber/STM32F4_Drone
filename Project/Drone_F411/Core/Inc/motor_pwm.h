@@ -37,4 +37,10 @@ void Motor_Set(float m1, float m2, float m3, float m4);
 /** @brief 全部电机停止 */
 void Motor_Stop(void);
 
+/**
+ * @brief 获取最近一拍 4 路电机输出 (Safety_Update 等记录用)
+ * @param m 输出 [m1, m2, m3, m4], 限幅后占空比 0.0~1.0
+ */
+void Motor_GetLast(float m[4]);
+
 #endif

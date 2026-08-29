@@ -16,15 +16,20 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "i2c.h"
 #include "usart.h"
-#include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include "mpu6050_i2c.h"
+#include "motor_pwm.h"
+#include "ble_protocol.h"
+#include "safety.h"
+#include "battery.h"
+#include "rtos_app.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,10 +61,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#include <stdio.h>
-#include "mpu6050_i2c.h"
-#include "motor_pwm.h"
-#include "freertos.h"
+
 /* USER CODE END 0 */
 
 /**
@@ -68,7 +70,6 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -77,7 +78,44 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
- ////////////////////////////////////////////
+  /* Initialize all configured peripherals */
+  /* GPIO 由各模块内部初始化 */
+
+  /* USER CODE BEGIN 2 */
+  /* 电机 PWM 最先初始化: 4 路输出确定为 0%, 排除 GPIO 悬空导致的误转 */
+  Motor_Init();
+
+  MX_USART1_UART_Init();   /* 调试/蓝牙串口 (printf 重定向到此) */
+  I2C1_Init();             /* I2C1: MPU6050 模块自持初始化 (PB8/PB9) */
+
+  BLE_Protocol_Init();     /* 蓝牙协议解析状态机复位 */
+  Safety_Init();           /* 安全上下文初始化 */
+  Battery_Init();          /* 电池电压检测 (ADC1/PA1) */
+
+  printf("[BOOT] Drone_F411 %s %s\r\n", __DATE__, __TIME__);
+
+  /* MPU6050 上电检测, 最多重试 5 次 (失败则安全停机, 不允许起飞) */
+  int rc = -1;
+  for (int i = 0; i < 5 && rc != 0; i++) {
+    rc = MPU6050_Init();
+    if (rc != 0) {
+      printf("[MPU] init failed, retry %d/5\r\n", i + 1);
+      HAL_Delay(50);
+    }
+  }
+  if (rc != 0) {
+    printf("[FATAL] MPU6050 not found, halted\r\n");
+    Motor_Stop();
+    Error_Handler();       /* 无 IMU = 不可控, 永久停机 */
+  }
+
+  IWDG_Init(1000);         /* 1s 独立看门狗, 控制任务每拍喂狗 */
+
+  freertos_start();        /* 创建任务并启动调度器 (不返回) */
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */

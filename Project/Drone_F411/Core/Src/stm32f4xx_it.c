@@ -22,6 +22,11 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+/* FreeRTOS 内核接管 SVC/PendSV (见 FreeRTOSConfig.h 的符号映射);
+ * SysTick 由本文件的 SysTick_Handler 同时驱动 HAL 时基与 RTOS 心跳 */
+#include "FreeRTOS.h"
+#include "task.h"
+extern void xPortSysTickHandler(void);
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -140,16 +145,9 @@ void UsageFault_Handler(void)
 
 /**
   * @brief This function handles System service call via SWI instruction.
+  *        实体由 FreeRTOS 内核提供: FreeRTOSConfig.h 中
+  *        #define vPortSVCHandler SVC_Handler 把端口层的实现映射到本向量。
   */
-void SVC_Handler(void)
-{
-  /* USER CODE BEGIN SVCall_IRQn 0 */
-
-  /* USER CODE END SVCall_IRQn 0 */
-  /* USER CODE BEGIN SVCall_IRQn 1 */
-
-  /* USER CODE END SVCall_IRQn 1 */
-}
 
 /**
   * @brief This function handles Debug monitor.
@@ -166,19 +164,16 @@ void DebugMon_Handler(void)
 
 /**
   * @brief This function handles Pendable request for system service.
+  *        实体由 FreeRTOS 内核提供: FreeRTOSConfig.h 中
+  *        #define xPortPendSVHandler PendSV_Handler 把端口层实现映射到本向量。
   */
-void PendSV_Handler(void)
-{
-  /* USER CODE BEGIN PendSV_IRQn 0 */
-
-  /* USER CODE END PendSV_IRQn 0 */
-  /* USER CODE BEGIN PendSV_IRQn 1 */
-
-  /* USER CODE END PendSV_IRQn 1 */
-}
 
 /**
   * @brief This function handles System tick timer.
+  *        一个中断同时驱动两套时基:
+  *          HAL_IncTick()          → HAL_GetTick / HAL_Delay 时基
+  *          xPortSysTickHandler()  → FreeRTOS 心跳 (调度器启动后)
+  *        解决 "RTOS 接管 SysTick 后 HAL 超时全部冻结" 的问题。
   */
 void SysTick_Handler(void)
 {
@@ -186,6 +181,10 @@ void SysTick_Handler(void)
 
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
+  if (xTaskGetSchedulerState() != taskSCHEDULER_NOT_STARTED)
+  {
+    xPortSysTickHandler();
+  }
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
   /* USER CODE END SysTick_IRQn 1 */

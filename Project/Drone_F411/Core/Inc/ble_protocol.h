@@ -24,6 +24,7 @@ enum {
     BLE_CMD_YAW        = 0x13,  /* 偏航角速度 (±180°/s) */
     BLE_CMD_EMERGENCY  = 0x20,  /* 紧急停机 */
     BLE_CMD_ALT_HOLD   = 0x21,  /* 定高开关 (0/1) */
+    BLE_CMD_ARM        = 0x24,  /* 解锁/上锁 (1 字节: 1=解锁 0=上锁) */
     BLE_CMD_ATTITUDE   = 0x30,  /* 姿态四元数 (4×float) */
     BLE_CMD_SETPOINT   = 0x40,  /* 四通道综合指令 */
 };
